@@ -133,6 +133,7 @@ if __name__ == "__main__":
   parser.add_argument("--out", type=str, default=f'abSENSE_results_{starttime}', help="Optional. Name of directory for output data. Default is date and time when analysis was run.")
 
   args = parser.parse_args()
+  np.random.seed(1)
 
   spiecial_distance = load_spiecial_distances(args.distfile, args.includeonly)
 
