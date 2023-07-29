@@ -113,6 +113,12 @@ def bit_score_reader(scorefile, species):
     for row in reader:
       yield row[reader.fieldnames[0]], {k: as_float(row[k]) for k in species}
 
+def csv_writer(file_path, fieldnames):
+  stream = open(file_path, 'w', newline="\n")
+  writer = csv.DictWriter(stream, fieldnames, delimiter="\t")
+  writer.writeheader()
+  return writer
+
 if __name__ == "__main__":
   parser = argparse.ArgumentParser(description='abSENSE arguments:')
 
@@ -133,10 +139,22 @@ if __name__ == "__main__":
   if args.includeonly:
     include = args.includeonly.split(",")
   else:
-    include = spiecial_distance.keys()
+    include = list(spiecial_distance.keys())
 
   my_abs = abSENSE(spiecial_distance, args.Eval)
+
+  os.mkdir(args.out)
+  spec_header = ["Gene"] + include
+  mloutputfile = csv_writer(os.path.join(args.out, 'Predicted_bitscores'), spec_header)
+  lowboundoutputfile = csv_writer(os.path.join(args.out, 'Bitscore_99PI_lowerbound_predictions'), spec_header)
+  highboundoutputfile = csv_writer(os.path.join(args.out, 'Bitscore_99PI_higherbound_predictions'), spec_header)
+  pvaloutputfile = csv_writer(os.path.join(args.out, 'Detection_failure_probabilities'), spec_header)
+  #outputfileparams = csv_writer(os.path.join(args.out, 'Parameter_values'), ["Gene", "a", "b"])
+  spec_files = [mloutputfile, lowboundoutputfile, highboundoutputfile, pvaloutputfile]
+
   for gene, bit_scores in bit_score_reader(args.scorefile, include):
-    for spec, results in my_abs.test_orthology(bit_scores).items():
-      pred, low, high, pval = results
-      print(results)
+    results = my_abs.test_orthology(bit_scores)
+    for i in range(4):
+      row = {k: round(v[i], 2) for k, v in results.items()}
+      row["Gene"] = gene
+      spec_files[i].writerow(row)
