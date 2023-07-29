@@ -79,7 +79,9 @@ class abSENSE:
       bounds=((-np.inf, 0), (np.inf, np.inf)))
 
     preds = {s: abSENSE.predict(self.spiecial_distance[s], a, b) for s in bit_scores}
+
     testvals = [np.random.multivariate_normal([a, b], covar) for i in range(200)]
+
     results = {s: abSENSE.PI_find(testvals, self.spiecial_distance[s], self.bitscore_threshold(gene,s)) for s in bit_scores}
 
     return {s: (preds[s], *results[s]) for s in bit_scores}
@@ -134,6 +136,9 @@ if __name__ == "__main__":
 
   args = parser.parse_args()
   np.random.seed(1)
+  # For testing
+  np.random.multivariate_normal = lambda n, *x: [0.5] * len(n)
+  np.random.normal = lambda *x: 0.5
 
   spiecial_distance = load_spiecial_distances(args.distfile, args.includeonly)
 
