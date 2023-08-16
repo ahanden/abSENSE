@@ -102,9 +102,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     np.random.seed(1)
-    # For testing
-    np.random.multivariate_normal = lambda n, *x: [0.5] * len(n)
-    np.random.normal = lambda *x: 0.5
 
     spiecial_distance = load_spiecial_distances(args.distfile, args.includeonly)
 

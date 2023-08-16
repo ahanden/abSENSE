@@ -15,6 +15,7 @@ class abSENSE:
         self.db_size = abSENSE._gen_lookup(default=8000000)
         self.spiecial_distance = spiecial_distances
         self.ethresh = ethresh
+        self.rng = np.random.default_rng()
 
     @staticmethod
     def _gen_lookup(lookup_dict=None, default=None):
@@ -35,19 +36,21 @@ class abSENSE:
         exp_d = exp(-b * distance)
         return np.sqrt(a * (1 - exp_d) * exp_d)
 
-    @staticmethod
-    def find_p_i(testvals, currx, bitthresh):
+    def find_p_i(self, testvals, currx, bitthresh):
         '''Function to take each of the sampled a, b values and use them to
         sample directly from the distribution of scores taking into account the
         Gaussian noise (a function of distance, a, b).
         This gives an empirical estimate of the prediction interval'''
+
+
         p_i_samples = []
         for a_vals, b_vals in testvals:
+
             detval = abSENSE.predict(currx, a_vals, b_vals)
             estnoise = abSENSE.estimate_noise(currx, a_vals, b_vals)
 
             if estnoise > 0:
-                p_i_samples += [detval + np.random.normal(0, estnoise) for i in range(200)]
+                p_i_samples += list(self.rng.normal(0, estnoise, 200) + detval)
             else:
                 p_i_samples.append(detval)
 
@@ -56,6 +59,8 @@ class abSENSE:
 
         pval = norm.cdf(bitthresh, mean, std)
         (lowint, highint) = norm.interval(0.99, mean, std)
+
+
 
         return lowint, highint, pval
 
@@ -73,6 +78,7 @@ class abSENSE:
 
     def test_orthology(self, bit_scores, gene=None):
         '''Computes orthology probabilities for a gene'''
+
         orthologs = [s for s, b in bit_scores.items() if b > 0]
 
         truncdistances = [self.spiecial_distance[s] for s in orthologs]
@@ -82,13 +88,14 @@ class abSENSE:
             abSENSE.predict,
             truncdistances,
             genebitscores,
+            p0=(np.mean(genebitscores), 1),
             bounds=((-np.inf, 0), (np.inf, np.inf)))
 
         preds = {s: abSENSE.predict(self.spiecial_distance[s], a, b) for s in bit_scores}
 
-        testvals = [np.random.multivariate_normal([a, b], covar) for i in range(200)]
+        testvals = self.rng.multivariate_normal([a, b], covar, 200)
 
-        results = {s: abSENSE.find_p_i(
+        results = {s: self.find_p_i(
           testvals,
           self.spiecial_distance[s],
           self.bitscore_threshold(gene,s)) for s in bit_scores}
